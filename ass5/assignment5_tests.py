@@ -1,5 +1,5 @@
 from hw5 import interleave_transition_systems, interleave_program_graphs
-#from ts_from_pg import transitionSystemFromProgramGraph
+from hw4 import transitionSystemFromProgramGraph
 
 
 class hashabledict(dict):
@@ -30,8 +30,10 @@ TS_INTERLEAVED1 = {
     'I': {('l1', 'q1')},
     'Act': {'a', 'b'},
     'to': {(('l1', 'q1'), 'b', ('l3', 'q1')), (('l1', 'q1'), 'a', ('l1', 'q2')), (('l1', 'q1'), 'a', ('l2', 'q1')),
-           (('l1', 'q2'), 'b', ('l1', 'q1')), (('l1', 'q2'), 'a', ('l2', 'q2')), (('l2', 'q1'), 'a', ('l2', 'q2')),
-           (('l3', 'q1'), 'a', ('l3', 'q2')), (('l3', 'q1'), 'a', ('l1', 'q1')), (('l2', 'q2'), 'b', ('l2', 'q1')),
+           (('l1', 'q2'), 'b', ('l1', 'q1')), (('l1', 'q2'), 'a',
+                                               ('l2', 'q2')), (('l2', 'q1'), 'a', ('l2', 'q2')),
+           (('l3', 'q1'), 'a', ('l3', 'q2')), (('l3', 'q1'), 'a',
+                                               ('l1', 'q1')), (('l2', 'q2'), 'b', ('l2', 'q1')),
            (('l3', 'q2'), 'a', ('l1', 'q2')), (('l3', 'q2'), 'b', ('l3', 'q1')), (('l1', 'q2'), 'b', ('l3', 'q2'))},
     'AP': {'second', 'first'},
     'L': {('l1', 'q1'): {'second', 'first'}, ('l1', 'q2'): {'second', 'first'},
@@ -64,7 +66,8 @@ TS_INTERLEAVED2 = {
     'I': {('s1', 't1')},
     'Act': {'a', 'b', 'c'},
     'to': {(('s1', 't1'), 'a', ('s2', 't1')), (('s1', 't1'), 'b', ('s3', 't1')), (('s1', 't1'), 'c', ('s1', 't2')),
-           (('s2', 't1'), 'c', ('s2', 't2')), (('s3', 't1'), 'c', ('s3', 't2')), (('s1', 't2'), 'a', ('s2', 't2')),
+           (('s2', 't1'), 'c', ('s2', 't2')), (('s3', 't1'), 'c',
+                                               ('s3', 't2')), (('s1', 't2'), 'a', ('s2', 't2')),
            (('s1', 't2'), 'b', ('s3', 't2'))},
     'AP': {'s1', 's2', 's3', 't1', 't2'},
     'L': {('s1', 't1'): {'s1', 't1'}, ('s1', 't2'): {'s1', 't2'},
@@ -261,11 +264,8 @@ ts_interleaved_peterson = {'S': {(('wait', 'crit'), hashabledict({'x': 1, 'b0': 
                                   ((('crit', 'wait'), hashabledict({'x': 0, 'b0': True, 'b1': True})), 'b0=False',
                                    (('noncrit', 'wait'), hashabledict({'x': 0, 'b0': False, 'b1': True}))),
                                   ((('wait', 'crit'), hashabledict({'x': 1, 'b0': True, 'b1': True})), 'b1=False', (('wait', 'noncrit'), hashabledict(hashabledict({'x': 1, 'b0': True, 'b1': False}))))},
-                           'I': {
-    (('noncrit', 'noncrit'), hashabledict({'x': 0, 'b0': False, 'b1': False})),
-    (('noncrit', 'noncrit'), hashabledict({'x': 1, 'b0': False, 'b1': False})),
-},
-    'AP': {('crit', 'noncrit'), ('wait', 'noncrit'), ('noncrit', 'crit'), ('noncrit', 'wait'), ('crit', 'crit'), ('crit', 'wait'), ('wait', 'crit'), ('wait', 'wait'), ('noncrit', 'noncrit')}, }
+                           'I': {(('noncrit', 'noncrit'), hashabledict({'x': 0, 'b0': False, 'b1': False})), (('noncrit', 'noncrit'), hashabledict({'x': 1, 'b0': False, 'b1': False})), },
+                           'AP': {('crit', 'noncrit'), ('wait', 'noncrit'), ('noncrit', 'crit'), ('noncrit', 'wait'), ('crit', 'crit'), ('crit', 'wait'), ('wait', 'crit'), ('wait', 'wait'), ('noncrit', 'noncrit')}, }
 
 
 pg1 = {'Loc': {'l1', 'l2'},
@@ -316,11 +316,12 @@ print("-- TESTING TRANSITION SYSTEM INTERLEAVING --")
 
 assert compare_pg(interleave_program_graphs(
     peterson0, peterson1), interleaved_peterson)
-assert compare_ts(transitionSystemFromProgramGraph(interleave_program_graphs(peterson0, peterson1),
-                                                   vars={'x': range(2), 'b0': {True, False}, 'b1': {True, False}}, labels=set()), ts_interleaved_peterson)
-
 assert compare_pg(interleave_program_graphs(pg1, pg2), pg1_2_interleaved)
-assert compare_ts(transitionSystemFromProgramGraph(interleave_program_graphs(pg1, pg2),
-                                                   vars={'x': range(3, 9)}, labels=set()), ts1_2_interleaved)
+
+assert compare_ts(transitionSystemFromProgramGraph(interleave_program_graphs(peterson0, peterson1), vars={'x': range(2), 'b0': {True, False}, 'b1': {True, False}}, labels=set()),
+                  ts_interleaved_peterson)
+
+assert compare_ts(transitionSystemFromProgramGraph(
+    interleave_program_graphs(pg1, pg2), vars={'x': range(3, 9)}, labels=set()), ts1_2_interleaved)
 
 print("PASSED\n")

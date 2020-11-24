@@ -2,15 +2,6 @@
 from itertools import product
 
 
-class Hashabledict(dict):
-    def __hash__(self):
-        return hash(frozenset(self.items()))
-
-
-def get_dict_combinations(dikt):
-    return (dict(zip(dikt.keys(), values)) for values in product(*dikt.values()))
-
-
 def bfsCreateTo(TS, ts1, ts2, h):
     queue = list(TS['I'])
     visited = list(queue)
@@ -23,14 +14,12 @@ def bfsCreateTo(TS, ts1, ts2, h):
                 if start[0] == f1:
                     if a1 not in h:
                         next = (t1, start[1])
-                        # to.add(set(next))
                         TS['to'] = TS['to'].union({(start, a1, next), })
                         if next not in visited:
                             visited.append(next)
                             queue.append(next)
                     elif a2 in h and start[1] == f2 and a1 == a2:
                         next = (t1, t2)
-                        # to.add(set(next))
                         TS['to'] = TS['to'].union({(start, a1, next), })
                         if next not in visited:
                             visited.append(next)
@@ -38,7 +27,6 @@ def bfsCreateTo(TS, ts1, ts2, h):
                 if start[1] == f2:
                     if a2 not in h:
                         next = (start[0], t2)
-                        # to.add(set(next))
                         TS['to'] = TS['to'].union({(start, a2, next), })
                         if next not in visited:
                             visited.append(next)
@@ -68,4 +56,36 @@ def interleave_transition_systems(ts1, ts2, h):
 
 def interleave_program_graphs(pg1, pg2):
     PG = {}
+    PG['Loc'] = set(product(pg1['Loc'], pg2['Loc']))
+    PG['Act'] = pg1['Act'].union(pg2['Act'])
+    PG['Loc0'] = set(product(pg1['Loc0'], pg2['Loc0']))
+    pg1g0 = pg1['g0']
+    pg2g0 = pg2['g0']
+    PG['g0'] = f'{pg1g0} and {pg2g0}'
+
+    def evaluate(cond, eta):
+        if cond == PG['g0']:
+            return (pg1['Eval'](pg1['g0'], eta) and pg2['Eval'](pg2['g0'], eta))
+        else:
+            return pg2['Eval'](cond, eta) or pg1['Eval'](cond, eta)
+
+    def effect(act, eta):
+        if act in pg1['Act']:
+            return pg1['Effect'](act, eta)
+        else:
+            return pg2['Effect'](act, eta)
+
+    to = set()
+    for (lfrom, cond, act, lto) in pg1['to']:
+        for l in pg2['Loc']:
+            to.add(((lfrom, l), cond, act, (lto, l)))
+
+    for (lfrom, cond, act, lto) in pg2['to']:
+        for l in pg1['Loc']:
+            to.add(((l, lfrom), cond, act, (l, lto)))
+
+    PG['Eval'] = evaluate
+    PG['Effect'] = effect
+    PG['to'] = to
+
     return PG
