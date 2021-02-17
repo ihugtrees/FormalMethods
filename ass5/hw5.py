@@ -67,7 +67,10 @@ def interleave_program_graphs(pg1, pg2):
         if cond == PG['g0']:
             return (pg1['Eval'](pg1['g0'], eta) and pg2['Eval'](pg2['g0'], eta))
         else:
-            return pg2['Eval'](cond, eta) or pg1['Eval'](cond, eta)
+            try:
+                return pg1a['Eval'](cond, eta)
+            except:
+                return pg2['Eval'](cond, eta)
 
     def effect(act, eta):
         if act in pg1['Act']:
@@ -89,3 +92,13 @@ def interleave_program_graphs(pg1, pg2):
     PG['to'] = to
 
     return PG
+
+
+def evaluate(cond, eta):
+    return {
+        'true': lambda eta: True,
+        'ncoke > 0': lambda eta: eta['ncoke'] > 0,
+        'nsprite > 0': lambda eta: eta['nsprite'] > 0,
+        'ncoke=0 && nsprite=0': lambda eta: eta['ncoke'] == 0 and eta['nsprite'] == 0,
+        'ncoke=2 && nsprite=2': lambda eta: eta['ncoke'] == 2 and eta['nsprite'] == 2,
+    }[cond](eta)
