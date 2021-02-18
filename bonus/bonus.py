@@ -1,6 +1,27 @@
 
 from itertools import product
 from re import findall
+import networkx as nx
+
+
+def gnba_to_nba(g):
+    nba = {}
+    nba['sigma'] = g['sigma']
+    nba['f'] = {(n, 1) for n in g['f'][0]}
+    nba['q0'] = {(n, 1) for n in g['q0']}
+    nba['q'] = set(product(g["q"], range(1, len(g["f"]) + 1)))
+
+    delta = set()
+    for (src, cond, dest) in g['delta']:
+        for i in range(len(g['f'])):
+            if src not in g['f'][i]:
+                delta.add(((src, i+1), cond, (dest, i+1)))
+            else:
+                delta.add(((src, i+1), cond, (dest, ((i+1) % len(g['f'])) + 1)))
+    
+    nba['delta'] = delta
+    return nba
+
 
 def upholds(s, phi):
     '''
@@ -18,88 +39,119 @@ def upholds(s, phi):
     eta = {x: x in s for x in literals}
     return eval(phi, None, eta)
 
-def bfsCreateTo(TS, ts, a):
-	queue = list(TS['I'])
-	visited = list(queue)
-	TS['S'] = TS['I'].copy()
 
-	while queue:
-		start = queue.pop(0)
-		for (f1, a1, t1) in ts['to']:
-			for (f2, phi, t2) in a['delta']:
-				if start[0] == f1 and start[1] == f2 and upholds(ts['L'](t1), phi):
-					next = (t1, t2)
-					TS['to'] = TS['to'].union({((f1, f2), a1, next), })
-					if next not in visited:
-						visited.append(next)
-						queue.append(next)
-					
-	for (s1, a, s2) in TS['to']:
-		TS['S'].add(s2)
+def bfsCreateTo(TS, ts, a):
+    queue = list(TS['I'])
+    visited = list(queue)
+    TS['S'] = TS['I'].copy()
+
+    while queue:
+        start = queue.pop(0)
+        for (f1, a1, t1) in ts['to']:
+            for (f2, phi, t2) in a['delta']:
+                if start[0] == f1 and start[1] == f2 and upholds(ts['L'](t1), phi):
+                    next = (t1, t2)
+                    TS['to'] = TS['to'].union({((f1, f2), a1, next), })
+                    if next not in visited:
+                        visited.append(next)
+                        queue.append(next)
+
+    for (s1, a, s2) in TS['to']:
+        TS['S'].add(s2)
+
 
 def transition_system_nba_product(ts, a):
-	TSxA = {}
+    TSxA = {}
 
-	i = set()
-	for s0 in ts['I']: 
-		for delta in a['delta']:
-			if delta[0] in a['q0'] and upholds(ts['L'](s0), delta[1]):
-				i.add((s0,delta[2]))
+    i = set()
+    for s0 in ts['I']:
+        for delta in a['delta']:
+            if delta[0] in a['q0'] and upholds(ts['L'](s0), delta[1]):
+                i.add((s0, delta[2]))
 
-	def L(tup):
-		return tup[1]
-	
-	TSxA['Act'] = ts['Act']
-	TSxA['AP'] = a['q']
-	TSxA['L'] = L
-	TSxA['I'] = i
-	TSxA['to'] = set()
-	
-	bfsCreateTo(TSxA, ts, a)
+    def L(tup):
+        return tup[1]
 
-	return TSxA
+    TSxA['Act'] = ts['Act']
+    TSxA['AP'] = a['q']
+    TSxA['L'] = L
+    TSxA['I'] = i
+    TSxA['to'] = set()
 
+    bfsCreateTo(TSxA, ts, a)
 
-# # Transition System
-# ts = {'S': {'s0', 's1', 's2', 's3', 's5', 's4'},
-#       'Act': {'beta', 'alpha', 'gamma'},
-#       'to': {('s5', 'alpha', 's2'), ('s3', 'gamma', 's1'), ('s5', 'beta', 's1'), ('s1', 'alpha', 's4'), ('s4', 'gamma', 's1'), ('s0', 'alpha', 's3'), ('s4', 'beta', 's5'), ('s2', 'gamma', 's1'), ('s0', 'beta', 's1')}, 
-# 	  'I': {'s0'},
-#       'AP': {'b', 'c', 'a'},
-#       'L': lambda s: {'s0': {'a', 'b'}, 's1': {'a', 'b', 'c'}, 's2': {'b', 'c'}, 's3': {'a', 'c'}, 's4': {'a', 'c'}, 's5': {'a', 'c'}}[s]}
-
-# # NBA
-# a = {'q': {'q3', 'q2', 'q0', 'q1'},
-#      'sigma': {'a', 'b and not c', 'not(b and not c) and not a', 'b and not c and not a', '(a or b) and not c', 'c', 'not(b and not c)', 'not(a or b) and not c'},
-#      'delta': {('q1', 'b and not c and not a', 'q1'), ('q2', 'c', 'q0'), ('q1', 'a', 'q2'), ('q0', 'not(b and not c)', 'q0'), ('q1', 'not(b and not c) and not a', 'q0'), ('q0', 'b and not c', 'q1'), ('q2', '(a or b) and not c', 'q3'), ('q2', 'not(a or b) and not c', 'q2')},
-#      'q0': {'q0'},
-#      'f': {'q3'}}
-
-# # TS x A
-# tsXa = {'S': {('s2', 'q0'), ('s0', 'q1'), ('s1', 'q0'), ('s1', 'q2'), ('s5', 'q0'), ('s3', 'q2'), ('s4', 'q0')},
-#         'Act': {'beta', 'alpha', 'gamma'},
-#         'to': {(('s1', 'q2'), 'alpha', ('s4', 'q0')), (('s5', 'q0'), 'alpha', ('s2', 'q0')), (('s1', 'q0'), 'alpha', ('s4', 'q0')), (('s2', 'q0'), 'gamma', ('s1', 'q0')), (('s4', 'q0'), 'beta', ('s5', 'q0')), (('s3', 'q2'), 'gamma', ('s1', 'q0')), (('s0', 'q1'), 'alpha', ('s3', 'q2')), (('s4', 'q0'), 'gamma', ('s1', 'q0')), (('s5', 'q0'), 'beta', ('s1', 'q0')), (('s0', 'q1'), 'beta', ('s1', 'q2'))},
-#         'I': {('s0', 'q1')},
-#         'AP': {'q3', 'q1', 'q2', 'q0'},
-#         'L': lambda s: s[1]}
-
-# print(transition_system_nba_product(ts, a)['S'])
-
-# if tsXa == transition_system_nba_product(ts, a):
-# 	print('success')
+    return TSxA
 
 
-# if tsXa['S'] == transition_system_nba_product(ts, a)['S']:
-# 	print('S')
+def nba_to_graph(nba):
+    g = nx.DiGraph()
+    for delta in nba['delta']:
+        g.add_edge(delta[0], delta[2])
+    return g
 
-# if tsXa['Act'] == transition_system_nba_product(ts, a)['Act']:
-# 	print('Act')
 
-# if tsXa['to'] == transition_system_nba_product(ts, a)['to']:
-# 	print('to')
+def make_safe(nba):
+    graph = nba_to_graph(nba)
+    cycles = list(nx.simple_cycles(graph))
+    q = set()
+    for cycle in cycles:
+        for node in cycle:
+            if node in nba['f']:
+                for n in cycle:
+                    q.add(n)
 
-# if tsXa['I'] == transition_system_nba_product(ts, a)['I']:
-# 	print('I')
+    new_delta = set()
+    for delta in nba['delta']:
+        if delta[0] in q and delta[2] in q:
+            new_delta.add(delta)
 
-# if tsXa['AP'] == transition_system_nba_product(ts, a)['AP']:
-# 	print('AP')
+    safe = {'q': q.copy(),
+            'sigma': nba['sigma'],
+            'delta': new_delta,
+            'q0': nba['q0'],
+            'f': q.copy()}
+    return safe
+
+
+def reverse(safe):
+    rev_safe = {}
+    rev_safe["q0"] = safe["q0"].copy()
+    rev_safe["f"] = {'___qfinal___'}
+    rev_safe["sigma"] = safe["sigma"].copy()
+    rev_safe["q"] = safe["q"].copy()
+    rev_safe["q"].add('___qfinal___')
+
+    delta = safe["delta"].copy()
+    for q in safe["q"]:
+        new_cond = ' or '.join(
+            [f'({delta[1]})' for delta in safe['delta'] if q == delta[0]])
+        delta.add((q, f"not({new_cond})", '___qfinal___'))
+
+    delta.add(('___qfinal___', 'True', '___qfinal___'))
+    rev_safe["delta"] = delta
+    return rev_safe
+
+
+def make_live(nba, safe):
+    reverse_nba = reverse(safe)
+    live = {}
+    live['sigma'] = nba['sigma']
+    live['q0'] = {(q, 1) for q in nba['q0']}
+    live['q0'] = live['q0'].union({(q, 2) for q in reverse_nba['q0']})
+
+    live['f'] = {(f, 1) for f in nba['f']}
+    live['f'] = live['f'].union({(f, 2) for f in reverse_nba['f']})
+
+    live['q'] = {(q, 1) for q in nba['q']}
+    live['q'] = live['q'].union({(q, 2) for q in reverse_nba['q']})
+
+    live['delta'] = {((d[0], 1), d[1], (d[2], 1)) for d in nba['delta']}
+    live['delta'] = live['delta'].union(
+        {((d[0], 2), d[1], (d[2], 2)) for d in reverse_nba['delta']})
+    return live
+
+
+def decompose(nba):
+    safe = make_safe(nba)
+    live = make_live(nba, safe)
+    return safe, live

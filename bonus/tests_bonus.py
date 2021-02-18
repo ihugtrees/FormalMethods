@@ -1,4 +1,4 @@
-from bonus import transition_system_nba_product
+from bonus import transition_system_nba_product, gnba_to_nba
 
 test0 = {'q': {'q2', 'q1', 'q0'},
          'sigma': {'true', 'not a', 'a'},
@@ -119,8 +119,8 @@ def compare_ts(ts1, ts2):
     return all(ts1[key] == ts2[key] for key in ts1 if key != 'L')
 
 
-# assert gnba_to_nba(test0) == res0
-# assert gnba_to_nba(test1) == res1
-# assert gnba_to_nba(test2) == res3
+assert gnba_to_nba(test0) == res0
+assert gnba_to_nba(test1) == res1
+assert gnba_to_nba(test2) == res3
 assert compare_ts(transition_system_nba_product(ts_test4, a_test4), tsXa_test4)
 assert compare_ts(transition_system_nba_product(ts_test5, a_test5), tsXa_test5)
