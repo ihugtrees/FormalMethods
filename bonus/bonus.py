@@ -17,8 +17,9 @@ def gnba_to_nba(g):
             if src not in g['f'][i]:
                 delta.add(((src, i+1), cond, (dest, i+1)))
             else:
-                delta.add(((src, i+1), cond, (dest, ((i+1) % len(g['f'])) + 1)))
-    
+                delta.add(
+                    ((src, i+1), cond, (dest, ((i+1) % len(g['f'])) + 1)))
+
     nba['delta'] = delta
     return nba
 
@@ -83,16 +84,12 @@ def transition_system_nba_product(ts, a):
     return TSxA
 
 
-def nba_to_graph(nba):
-    g = nx.DiGraph()
-    for delta in nba['delta']:
-        g.add_edge(delta[0], delta[2])
-    return g
-
-
 def make_safe(nba):
-    graph = nba_to_graph(nba)
+    graph = nx.DiGraph()
+    for delta in nba['delta']:
+        graph.add_edge(delta[0], delta[2])
     cycles = list(nx.simple_cycles(graph))
+
     q = set()
     for cycle in cycles:
         for node in cycle:
