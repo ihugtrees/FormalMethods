@@ -85,64 +85,59 @@ def transition_system_nba_product(ts, a):
 
 
 def make_safe(nba):
+    safe = {'sigma': nba['sigma'].copy(),
+            'q0': nba['q0'].copy(),
+            'q': set(),
+            'delta': set(),
+            'f': set()}
+
     graph = nx.DiGraph()
     for delta in nba['delta']:
         graph.add_edge(delta[0], delta[2])
     cycles = list(nx.simple_cycles(graph))
 
-    q = set()
     for cycle in cycles:
         for node in cycle:
             if node in nba['f']:
                 for n in cycle:
-                    q.add(n)
+                    safe['q'].add(n)
+                    safe['f'].add(n)
 
-    new_delta = set()
     for delta in nba['delta']:
-        if delta[0] in q and delta[2] in q:
-            new_delta.add(delta)
+        if delta[0] in safe['q'] and delta[2] in safe['q']:
+            safe['delta'].add(delta)
 
-    safe = {'q': q.copy(),
-            'sigma': nba['sigma'],
-            'delta': new_delta,
-            'q0': nba['q0'],
-            'f': q.copy()}
     return safe
 
 
 def reverse(safe):
-    rev_safe = {}
-    rev_safe["q0"] = safe["q0"].copy()
-    rev_safe["f"] = {'___qfinal___'}
-    rev_safe["sigma"] = safe["sigma"].copy()
-    rev_safe["q"] = safe["q"].copy()
-    rev_safe["q"].add('___qfinal___')
+    rev_safe = {'q0': safe["q0"].copy(),
+                'f': {'___qfinal___'},
+                'sigma': safe["sigma"].copy(),
+                'q': safe["q"].copy(),
+                'delta': safe["delta"].copy()}
+    rev_safe['q'].add('___qfinal___')
 
-    delta = safe["delta"].copy()
-    for q in safe["q"]:
+    for q in safe['q']:
         new_cond = ' or '.join(
             [f'({delta[1]})' for delta in safe['delta'] if q == delta[0]])
-        delta.add((q, f"not({new_cond})", '___qfinal___'))
+        rev_safe['delta'].add((q, f"not({new_cond})", '___qfinal___'))
 
-    delta.add(('___qfinal___', 'True', '___qfinal___'))
-    rev_safe["delta"] = delta
+    rev_safe['delta'].add(('___qfinal___', 'True', '___qfinal___'))
     return rev_safe
 
 
 def make_live(nba, safe):
     reverse_nba = reverse(safe)
-    live = {}
-    live['sigma'] = nba['sigma']
-    live['q0'] = {(q, 1) for q in nba['q0']}
+    live = {'sigma': nba['sigma'].copy(),
+            'q': {(q, 1) for q in nba['q']},
+            'f': {(f, 1) for f in nba['f']},
+            'q0': {(q, 1) for q in nba['q0']},
+            'delta': {((d[0], 1), d[1], (d[2], 1)) for d in nba['delta']}}
+
     live['q0'] = live['q0'].union({(q, 2) for q in reverse_nba['q0']})
-
-    live['f'] = {(f, 1) for f in nba['f']}
     live['f'] = live['f'].union({(f, 2) for f in reverse_nba['f']})
-
-    live['q'] = {(q, 1) for q in nba['q']}
     live['q'] = live['q'].union({(q, 2) for q in reverse_nba['q']})
-
-    live['delta'] = {((d[0], 1), d[1], (d[2], 1)) for d in nba['delta']}
     live['delta'] = live['delta'].union(
         {((d[0], 2), d[1], (d[2], 2)) for d in reverse_nba['delta']})
     return live
